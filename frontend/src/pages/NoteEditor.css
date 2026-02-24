@@ -7,6 +7,21 @@
     flex-wrap: wrap;
 }
 
+@media (max-width: 768px) {
+    .editor-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .editor-header {
+        margin-bottom: 1rem;
+    }
+}
+
 .note-title-input {
     flex: 1;
     font-size: 2.5rem;
@@ -19,8 +34,22 @@
     min-width: 300px;
 }
 
+@media (max-width: 768px) {
+    .note-title-input {
+        font-size: 2rem;
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .note-title-input {
+        font-size: 1.5rem;
+    }
+}
+
 .note-title-input::placeholder {
-    color: rgba(255, 255, 255, 0.2);
+    color: var(--text-muted);
+    opacity: 0.6;
 }
 
 .editor-actions {
@@ -28,17 +57,28 @@
     gap: 1rem;
 }
 
+@media (max-width: 480px) {
+    .editor-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .editor-actions .btn {
+        flex: 1;
+    }
+}
+
 .btn-magic {
-    background: linear-gradient(135deg, #10B981, #059669);
+    background: linear-gradient(135deg, var(--success-color), var(--success-hover));
     color: white;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    box-shadow: var(--shadow-lg), 0 0 15px rgba(16, 185, 129, 0.2);
     position: relative;
     overflow: hidden;
 }
 
 .btn-magic:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    box-shadow: var(--shadow-xl), 0 0 20px rgba(16, 185, 129, 0.3);
 }
 
 .btn-magic.loading {
@@ -67,16 +107,17 @@
 .ai-summary-box {
     margin-bottom: 2rem;
     padding: 1.5rem 2rem;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, rgba(22, 27, 34, 0.7) 100%);
+    border: 1px solid var(--success-color);
+    background: linear-gradient(180deg, var(--success-soft) 0%, var(--bg-panel) 100%);
+    border-radius: var(--border-radius-lg);
 }
 
 .summary-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.75rem;
     margin-bottom: 1rem;
-    color: #34D399;
+    color: var(--success-color);
 }
 
 .summary-header h4 {
@@ -97,12 +138,28 @@
     height: 60vh;
     min-height: 500px;
     overflow: hidden;
+    border-radius: var(--border-radius-lg);
+}
+
+@media (max-width: 768px) {
+    .editor-workspace {
+        height: 50vh;
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .editor-workspace {
+        height: 40vh;
+        min-height: 300px;
+    }
 }
 
 .editor-tabs {
     display: flex;
     border-bottom: 1px solid var(--border-light);
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--bg-muted);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .tab-btn {
@@ -111,19 +168,27 @@
     color: var(--text-muted);
     font-weight: 500;
     font-size: 1rem;
-    transition: all 0.2s;
+    transition: all var(--transition-normal);
     border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+@media (max-width: 480px) {
+    .tab-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
 }
 
 .tab-btn:hover {
     color: var(--text-main);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-panel-hover);
 }
 
 .tab-btn.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
-    background: rgba(99, 102, 241, 0.1);
+    background: var(--primary-soft);
 }
 
 .editor-content-area {
@@ -153,7 +218,8 @@
     height: 100%;
     padding: 1.5rem;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--bg-muted);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
 }
 
 /* Base Markdown Styles */

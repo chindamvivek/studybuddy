@@ -44,14 +44,16 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    transition: all 0.2s ease;
+    transition: all var(--transition-normal);
     border-left: 3px solid transparent;
+    border-radius: var(--border-radius-md);
 }
 
 .note-item:hover {
     transform: translateX(5px);
     border-left-color: var(--primary-color);
     background: var(--bg-panel-hover);
+    box-shadow: var(--shadow-sm);
 }
 
 .note-info h3 {
@@ -72,15 +74,16 @@
 }
 
 .ai-badge {
-    background: rgba(139, 92, 246, 0.2);
-    color: #C4B5FD;
-    padding: 4px 10px;
-    border-radius: 20px;
+    background: var(--primary-soft);
+    color: var(--primary-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius-full);
     font-size: 0.75rem;
     font-weight: 600;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid var(--primary-soft-border);
     display: inline-flex;
     align-items: center;
+    gap: 0.25rem;
 }
 
 .loading-state {

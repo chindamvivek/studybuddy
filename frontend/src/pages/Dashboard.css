@@ -5,6 +5,21 @@
     margin-top: 2rem;
 }
 
+@media (max-width: 768px) {
+    .dashboard .course-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard .course-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
 .course-card {
     display: flex;
     flex-direction: column;
@@ -14,6 +29,21 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .course-card {
+        height: auto;
+        min-height: 160px;
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .course-card {
+        padding: 1rem;
+        min-height: 140px;
+    }
 }
 
 .course-card::before {
@@ -42,7 +72,7 @@
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #fff;
+    color: var(--text-main);
 }
 
 .course-content p {
@@ -50,6 +80,7 @@
     font-size: 0.95rem;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -102,12 +133,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
@@ -117,11 +149,35 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    animation: slideUp 0.3s ease-out;
+    border-radius: var(--border-radius-xl);
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        padding: 2rem;
+        margin: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        width: 98%;
+        padding: 1.5rem;
+        margin: 0.5rem;
+    }
 }
 
 .modal-content h3 {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
+    color: var(--text-main);
+    font-weight: 700;
 }
 
 .modal-content form {
@@ -135,4 +191,15 @@
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 1rem;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
