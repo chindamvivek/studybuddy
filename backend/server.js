@@ -31,8 +31,12 @@ app.get('/api/courses', (req, res) => {
 
 // Get single course by ID
 app.get('/api/courses/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid course id' });
+    }
     try {
-        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(id);
         if (!course) return res.status(404).json({ error: 'Course not found' });
         res.json(course);
     } catch (error) {
@@ -43,7 +47,15 @@ app.get('/api/courses/:id', (req, res) => {
 // Create a new course
 app.post('/api/courses', (req, res) => {
     const { title, description } = req.body;
-    if (!title) return res.status(400).json({ error: 'Title is required' });
+    if (!title || typeof title !== 'string' || !title.trim()) {
+        return res.status(400).json({ error: 'Title is required' });
+    }
+    if (title.length > 200) {
+        return res.status(400).json({ error: 'Title is too long (max 200 characters)' });
+    }
+    if (description && description.length > 1000) {
+        return res.status(400).json({ error: 'Description is too long (max 1000 characters)' });
+    }
 
     try {
         const stmt = db.prepare('INSERT INTO courses (title, description) VALUES (?, ?)');
@@ -57,10 +69,23 @@ app.post('/api/courses', (req, res) => {
 
 // Update a course
 app.put('/api/courses/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid course id' });
+    }
     const { title, description } = req.body;
+    if (title && (typeof title !== 'string' || !title.trim())) {
+        return res.status(400).json({ error: 'Title, if provided, must be a non-empty string' });
+    }
+    if (title && title.length > 200) {
+        return res.status(400).json({ error: 'Title is too long (max 200 characters)' });
+    }
+    if (description && description.length > 1000) {
+        return res.status(400).json({ error: 'Description is too long (max 1000 characters)' });
+    }
     try {
         const stmt = db.prepare('UPDATE courses SET title = ?, description = ? WHERE id = ?');
-        const info = stmt.run(title, description, req.params.id);
+        const info = stmt.run(title, description, id);
         if (info.changes === 0) return res.status(404).json({ error: 'Course not found' });
 
         const updatedCourse = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
@@ -72,9 +97,13 @@ app.put('/api/courses/:id', (req, res) => {
 
 // Delete a course
 app.delete('/api/courses/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid course id' });
+    }
     try {
         const stmt = db.prepare('DELETE FROM courses WHERE id = ?');
-        const info = stmt.run(req.params.id);
+        const info = stmt.run(id);
         if (info.changes === 0) return res.status(404).json({ error: 'Course not found' });
         res.json({ success: true, message: 'Course deleted successfully' });
     } catch (error) {
@@ -88,11 +117,15 @@ app.delete('/api/courses/:id', (req, res) => {
 
 // Get all notes for a specific course
 app.get('/api/courses/:courseId/notes', (req, res) => {
+    const courseId = Number(req.params.courseId);
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+        return res.status(400).json({ error: 'Invalid course id' });
+    }
     try {
-        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.courseId);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(courseId);
         if (!course) return res.status(404).json({ error: 'Course not found' });
 
-        const notes = db.prepare('SELECT * FROM notes WHERE course_id = ? ORDER BY updated_at DESC').all(req.params.courseId);
+        const notes = db.prepare('SELECT * FROM notes WHERE course_id = ? ORDER BY updated_at DESC').all(courseId);
         res.json(notes);
     } catch (error) {
         res.status(500).json({ error: error.message });

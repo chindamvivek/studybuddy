@@ -1,6 +1,12 @@
 import Database from 'better-sqlite3';
+import dotenv from 'dotenv';
 
-const db = new Database('studybuddy.db', { verbose: console.log });
+dotenv.config();
+
+const DB_PATH = process.env.DB_PATH || 'studybuddy.db';
+const DB_VERBOSE = process.env.DB_VERBOSE_SQL === 'true';
+
+const db = new Database(DB_PATH, DB_VERBOSE ? { verbose: console.log } : {});
 
 // Create or update schema
 db.pragma('foreign_keys = ON');

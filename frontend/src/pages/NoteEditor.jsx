@@ -129,7 +129,9 @@ export default function NoteEditor() {
                         <h4>AI Generated Summary</h4>
                     </div>
                     <div className="markdown-body">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+                            {summary}
+                        </ReactMarkdown>
                     </div>
                 </div>
             )}
@@ -161,7 +163,7 @@ export default function NoteEditor() {
                         />
                     ) : (
                         <div className="markdown-preview markdown-body">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
                                 {content || '*Nothing to preview...*'}
                             </ReactMarkdown>
                         </div>

@@ -8,17 +8,24 @@ export default function Dashboard() {
     const [isModalOpen, setModalOpen] = useState(false);
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchCourses();
     }, []);
 
     const fetchCourses = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const res = await api.getCourses();
             setCourses(res.data);
         } catch (err) {
             console.error("Fetch courses error:", err);
+            setError('Failed to load courses. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -32,7 +39,8 @@ export default function Dashboard() {
             setModalOpen(false);
             fetchCourses();
         } catch (err) {
-            alert("Failed to connect to backend. Make sure the Node server is running on port 5000!");
+            console.error('Create course error:', err);
+            alert("Failed to create course. Please try again.");
         }
     };
 
@@ -43,13 +51,19 @@ export default function Dashboard() {
                 await api.deleteCourse(id);
                 fetchCourses();
             } catch (err) {
-                alert("Failed to delete course. Backend may be offline.");
+                console.error('Delete course error:', err);
+                alert("Failed to delete course. Please try again.");
             }
         }
     };
 
     return (
         <div className="dashboard page-enter-active">
+            {error && (
+                <div className="error-banner">
+                    {error}
+                </div>
+            )}
             <div className="page-header">
                 <div>
                     <h2 className="page-title">My Courses</h2>
@@ -61,6 +75,11 @@ export default function Dashboard() {
             </div>
 
             <div className="course-grid">
+                {loading && (
+                    <div className="loading-state">
+                        Loading courses...
+                    </div>
+                )}
                 {courses.map(c => (
                     <Link to={`/courses/${c.id}`} key={c.id} className="course-card glass-panel">
                         <div className="course-content">
