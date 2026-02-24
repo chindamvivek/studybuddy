@@ -16,13 +16,89 @@ app.use(express.json());
 initDb();
 
 // ==========================================
+// AUTH ROUTES (NO HASHING / TOKENS)
+// ==========================================
+
+const sanitizeUser = (user) => ({
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    created_at: user.created_at,
+});
+
+// Signup
+app.post('/api/auth/signup', (req, res) => {
+    const { full_name, email, password } = req.body;
+
+    if (!full_name || typeof full_name !== 'string' || !full_name.trim()) {
+        return res.status(400).json({ error: 'Full name is required' });
+    }
+    if (!email || typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 4) {
+        return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
+    try {
+        const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.trim());
+        if (existing) {
+            return res.status(409).json({ error: 'Email is already registered' });
+        }
+
+        const stmt = db.prepare('INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)');
+        const info = stmt.run(full_name.trim(), email.trim(), password);
+        const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+        res.status(201).json(sanitizeUser(newUser));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Login
+app.post('/api/auth/login', (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!password || typeof password !== 'string') {
+        return res.status(400).json({ error: 'Password is required' });
+    }
+
+    try {
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim());
+        if (!user || user.password !== password) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        res.json(sanitizeUser(user));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Helper to read user id from header
+const getUserIdFromHeader = (req) => {
+    const raw = req.header('x-user-id');
+    const id = Number(raw);
+    if (!raw || !Number.isInteger(id) || id <= 0) {
+        return null;
+    }
+    return id;
+};
+
+// ==========================================
 // COURSE ROUTES
 // ==========================================
 
 // Get all courses
 app.get('/api/courses', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     try {
-        const courses = db.prepare('SELECT * FROM courses ORDER BY created_at DESC').all();
+        const courses = db.prepare('SELECT * FROM courses WHERE user_id = ? ORDER BY created_at DESC').all(userId);
         res.json(courses);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -31,12 +107,16 @@ app.get('/api/courses', (req, res) => {
 
 // Get single course by ID
 app.get('/api/courses/:id', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ error: 'Invalid course id' });
     }
     try {
-        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(id);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(id, userId);
         if (!course) return res.status(404).json({ error: 'Course not found' });
         res.json(course);
     } catch (error) {
@@ -46,6 +126,10 @@ app.get('/api/courses/:id', (req, res) => {
 
 // Create a new course
 app.post('/api/courses', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const { title, description } = req.body;
     if (!title || typeof title !== 'string' || !title.trim()) {
         return res.status(400).json({ error: 'Title is required' });
@@ -58,9 +142,9 @@ app.post('/api/courses', (req, res) => {
     }
 
     try {
-        const stmt = db.prepare('INSERT INTO courses (title, description) VALUES (?, ?)');
-        const info = stmt.run(title, description);
-        const newCourse = db.prepare('SELECT * FROM courses WHERE id = ?').get(info.lastInsertRowid);
+        const stmt = db.prepare('INSERT INTO courses (user_id, title, description) VALUES (?, ?, ?)');
+        const info = stmt.run(userId, title, description);
+        const newCourse = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(info.lastInsertRowid, userId);
         res.status(201).json(newCourse);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -69,6 +153,10 @@ app.post('/api/courses', (req, res) => {
 
 // Update a course
 app.put('/api/courses/:id', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ error: 'Invalid course id' });
@@ -84,11 +172,11 @@ app.put('/api/courses/:id', (req, res) => {
         return res.status(400).json({ error: 'Description is too long (max 1000 characters)' });
     }
     try {
-        const stmt = db.prepare('UPDATE courses SET title = ?, description = ? WHERE id = ?');
-        const info = stmt.run(title, description, id);
+        const stmt = db.prepare('UPDATE courses SET title = ?, description = ? WHERE id = ? AND user_id = ?');
+        const info = stmt.run(title, description, id, userId);
         if (info.changes === 0) return res.status(404).json({ error: 'Course not found' });
 
-        const updatedCourse = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
+        const updatedCourse = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(id, userId);
         res.json(updatedCourse);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -97,6 +185,10 @@ app.put('/api/courses/:id', (req, res) => {
 
 // Delete a course
 app.delete('/api/courses/:id', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ error: 'Invalid course id' });
@@ -117,12 +209,16 @@ app.delete('/api/courses/:id', (req, res) => {
 
 // Get all notes for a specific course
 app.get('/api/courses/:courseId/notes', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const courseId = Number(req.params.courseId);
     if (!Number.isInteger(courseId) || courseId <= 0) {
         return res.status(400).json({ error: 'Invalid course id' });
     }
     try {
-        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(courseId);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
         if (!course) return res.status(404).json({ error: 'Course not found' });
 
         const notes = db.prepare('SELECT * FROM notes WHERE course_id = ? ORDER BY updated_at DESC').all(courseId);
@@ -134,8 +230,19 @@ app.get('/api/courses/:courseId/notes', (req, res) => {
 
 // Get a specific note within a course
 app.get('/api/courses/:courseId/notes/:noteId', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
+    const courseId = Number(req.params.courseId);
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+        return res.status(400).json({ error: 'Invalid course id' });
+    }
     try {
-        const note = db.prepare('SELECT * FROM notes WHERE id = ? AND course_id = ?').get(req.params.noteId, req.params.courseId);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
+        if (!course) return res.status(404).json({ error: 'Course not found' });
+
+        const note = db.prepare('SELECT * FROM notes WHERE id = ? AND course_id = ?').get(req.params.noteId, courseId);
         if (!note) return res.status(404).json({ error: 'Note not found' });
         res.json(note);
     } catch (error) {
@@ -145,12 +252,16 @@ app.get('/api/courses/:courseId/notes/:noteId', (req, res) => {
 
 // Create a new note within a course
 app.post('/api/courses/:courseId/notes', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const { title, content } = req.body;
     const { courseId } = req.params;
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
     try {
-        const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(courseId);
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
         if (!course) return res.status(404).json({ error: 'Course not found' });
 
         const stmt = db.prepare('INSERT INTO notes (course_id, title, content) VALUES (?, ?, ?)');
@@ -164,10 +275,17 @@ app.post('/api/courses/:courseId/notes', (req, res) => {
 
 // Update a specific note within a course
 app.put('/api/courses/:courseId/notes/:noteId', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const { title, content } = req.body;
     const { courseId, noteId } = req.params;
 
     try {
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
+        if (!course) return res.status(404).json({ error: 'Course not found' });
+
         const stmt = db.prepare(`
       UPDATE notes 
       SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP 
@@ -185,8 +303,15 @@ app.put('/api/courses/:courseId/notes/:noteId', (req, res) => {
 
 // Delete a specific note within a course
 app.delete('/api/courses/:courseId/notes/:noteId', (req, res) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const { courseId, noteId } = req.params;
     try {
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
+        if (!course) return res.status(404).json({ error: 'Course not found' });
+
         const stmt = db.prepare('DELETE FROM notes WHERE id = ? AND course_id = ?');
         const info = stmt.run(noteId, courseId);
         if (info.changes === 0) return res.status(404).json({ error: 'Note not found or does not belong to this course' });
@@ -201,9 +326,16 @@ app.delete('/api/courses/:courseId/notes/:noteId', (req, res) => {
 // ==========================================
 
 app.post('/api/courses/:courseId/notes/:noteId/summarize', async (req, res, next) => {
+    const userId = getUserIdFromHeader(req);
+    if (!userId) {
+        return res.status(401).json({ error: 'Missing or invalid user id' });
+    }
     const { courseId, noteId } = req.params;
 
     try {
+        const course = db.prepare('SELECT * FROM courses WHERE id = ? AND user_id = ?').get(courseId, userId);
+        if (!course) return res.status(404).json({ error: 'Course not found' });
+
         const note = db.prepare('SELECT * FROM notes WHERE id = ? AND course_id = ?').get(noteId, courseId);
         if (!note) return res.status(404).json({ error: 'Note not found or does not belong to this course' });
         if (!note.content) return res.status(400).json({ error: 'Note content is empty. Cannot summarize.' });
