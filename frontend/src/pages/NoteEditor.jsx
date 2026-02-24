@@ -15,6 +15,8 @@ export default function NoteEditor() {
     const [content, setContent] = useState('');
     const [summary, setSummary] = useState(null);
 
+    const [aiError, setAiError] = useState(null);
+
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
@@ -72,13 +74,15 @@ export default function NoteEditor() {
             alert('Please save the note first before summarizing.');
             return;
         }
+        setAiError(null);
         setSummarizing(true);
         try {
             const res = await api.summarizeNote(courseId, noteId);
             setSummary(res.data.summary);
         } catch (error) {
             console.error('Error summarizing note:', error);
-            alert('Failed to summarize note. Please try again.');
+            const apiMessage = error?.response?.data?.error;
+            setAiError(apiMessage || 'Failed to summarize note. Please try again.');
         } finally {
             setSummarizing(false);
         }
@@ -122,6 +126,11 @@ export default function NoteEditor() {
             </div>
 
             {/* AI Summary Display */}
+            {aiError && (
+                <div className="error-banner">
+                    {aiError}
+                </div>
+            )}
             {summary && (
                 <div className="ai-summary-box glass-panel animate-fade-in">
                     <div className="summary-header">
