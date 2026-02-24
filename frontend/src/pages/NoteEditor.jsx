@@ -82,7 +82,12 @@ export default function NoteEditor() {
         } catch (error) {
             console.error('Error summarizing note:', error);
             const apiMessage = error?.response?.data?.error;
-            setAiError(apiMessage || 'Failed to summarize note. Please try again.');
+            const apiDetails = error?.response?.data?.details;
+            if (apiMessage && apiDetails) {
+                setAiError(`${apiMessage} ${apiDetails}`);
+            } else {
+                setAiError(apiMessage || apiDetails || 'Failed to summarize note. Please try again.');
+            }
         } finally {
             setSummarizing(false);
         }

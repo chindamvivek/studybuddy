@@ -18,6 +18,14 @@ function RequireAuth({ children }) {
   return children;
 }
 
+function PublicOnly({ children }) {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 function AppShell() {
   const { user, logout } = useAuth();
 
@@ -87,8 +95,8 @@ function AppShell() {
               </RequireAuth>
             }
           />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+          <Route path="/signup" element={<PublicOnly><Signup /></PublicOnly>} />
         </Routes>
       </main>
     </div>

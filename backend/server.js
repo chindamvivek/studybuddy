@@ -380,14 +380,50 @@ Keep the summary educational and actionable for a student reviewing this materia
         });
 
         if (!groqRes.ok) {
-            const errText = await groqRes.text().catch(() => '');
+            const contentType = groqRes.headers.get('content-type') || '';
+            let errText = '';
+            let errJson = null;
+
+            try {
+                if (contentType.includes('application/json')) {
+                    errJson = await groqRes.json();
+                } else {
+                    errText = await groqRes.text();
+                }
+            } catch {
+                // ignore parsing errors
+            }
+
+            const upstreamMessage =
+                errJson?.error?.message ||
+                errJson?.message ||
+                (typeof errText === 'string' && errText.trim() ? errText.trim() : null);
+
             if (groqRes.status === 401 || groqRes.status === 403) {
-                return res.status(500).json({ error: 'AI service authentication failed. Check GROQ_API_KEY.' });
+                return res.status(500).json({
+                    error: 'AI service authentication failed. Check GROQ_API_KEY.',
+                    details: upstreamMessage || undefined,
+                });
             }
             if (groqRes.status === 429) {
-                return res.status(429).json({ error: 'AI service rate limit exceeded. Please try again later.' });
+                return res.status(429).json({
+                    error: 'AI service rate limit exceeded. Please try again later.',
+                    details: upstreamMessage || undefined,
+                });
             }
-            return res.status(502).json({ error: 'AI service error. Please try again.', details: errText || undefined });
+
+            // If request is invalid (bad model, too many tokens, etc.), bubble it up clearly
+            if (groqRes.status >= 400 && groqRes.status < 500) {
+                return res.status(400).json({
+                    error: 'AI request failed. Please try again.',
+                    details: upstreamMessage || undefined,
+                });
+            }
+
+            return res.status(502).json({
+                error: 'AI service error. Please try again.',
+                details: upstreamMessage || undefined,
+            });
         }
 
         const groqJson = await groqRes.json();
