@@ -14,25 +14,37 @@ export default function Dashboard() {
     }, []);
 
     const fetchCourses = async () => {
-        const res = await api.getCourses();
-        setCourses(res.data);
+        try {
+            const res = await api.getCourses();
+            setCourses(res.data);
+        } catch (err) {
+            console.error("Fetch courses error:", err);
+        }
     };
 
     const handleCreateCourse = async (e) => {
         e.preventDefault();
         if (!newTitle.trim()) return;
-        await api.createCourse({ title: newTitle, description: newDesc });
-        setNewTitle('');
-        setNewDesc('');
-        setModalOpen(false);
-        fetchCourses();
+        try {
+            await api.createCourse({ title: newTitle, description: newDesc });
+            setNewTitle('');
+            setNewDesc('');
+            setModalOpen(false);
+            fetchCourses();
+        } catch (err) {
+            alert("Failed to connect to backend. Make sure the Node server is running on port 5000!");
+        }
     };
 
     const handleDeleteCourse = async (id, e) => {
         e.preventDefault();
         if (window.confirm('Delete this course and all its notes?')) {
-            await api.deleteCourse(id);
-            fetchCourses();
+            try {
+                await api.deleteCourse(id);
+                fetchCourses();
+            } catch (err) {
+                alert("Failed to delete course. Backend may be offline.");
+            }
         }
     };
 

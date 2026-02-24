@@ -25,16 +25,23 @@ export default function NoteEditor() {
     }, [courseId, noteId]);
 
     const fetchData = async () => {
-        const cRes = await api.getCourse(courseId);
-        setCourse(cRes.data);
+        try {
+            const [cRes] = await Promise.all([
+                api.getCourse(courseId)
+            ]);
+            setCourse(cRes.data);
 
-        if (!isNew) {
-            const nRes = await api.getNote(noteId);
-            if (nRes.data) {
-                setTitle(nRes.data.title);
-                setContent(nRes.data.content);
-                setSummary(nRes.data.summary);
+            if (!isNew) {
+                const nRes = await api.getNote(courseId, noteId);
+                if (nRes.data) {
+                    setTitle(nRes.data.title);
+                    setContent(nRes.data.content);
+                    setSummary(nRes.data.summary);
+                }
             }
+        } catch (error) {
+            console.error('Error fetching note data:', error);
+        } finally {
             setLoading(false);
         }
     };
@@ -49,7 +56,7 @@ export default function NoteEditor() {
             const res = await api.createNote(courseId, { title, content });
             navigate(`/courses/${courseId}/notes/${res.data.id}`);
         } else {
-            await api.updateNote(noteId, { title, content });
+            await api.updateNote(courseId, noteId, { title, content });
         }
         setSaving(false);
     };
@@ -60,8 +67,8 @@ export default function NoteEditor() {
             return;
         }
         setSummarizing(true);
-        const res = await api.summarizeNote(noteId);
-        setSummary(res.data);
+        const res = await api.summarizeNote(courseId, noteId);
+        setSummary(res.data.summary);
         setSummarizing(false);
     };
 

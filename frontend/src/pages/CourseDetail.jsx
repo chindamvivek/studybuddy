@@ -32,7 +32,7 @@ export default function CourseDetail() {
     const handleDeleteNote = async (id, e) => {
         e.preventDefault();
         if (window.confirm('Delete this note?')) {
-            await api.deleteNote(id);
+            await api.deleteNote(courseId, id);
             fetchCourseAndNotes();
         }
     };
