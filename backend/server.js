@@ -1,6 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import { db, initDb } from './db.js';
+
+// Load environment variables from .env
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -163,7 +167,7 @@ app.delete('/api/courses/:courseId/notes/:noteId', (req, res) => {
 // AI SUMMARIZATION (MOCK OR REAL)
 // ==========================================
 
-app.post('/api/courses/:courseId/notes/:noteId/summarize', async (req, res) => {
+app.post('/api/courses/:courseId/notes/:noteId/summarize', async (req, res, next) => {
     const { courseId, noteId } = req.params;
 
     try {
@@ -181,8 +185,18 @@ app.post('/api/courses/:courseId/notes/:noteId/summarize', async (req, res) => {
 
         res.json({ summary: mockSummary });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
+});
+
+// Global error handler (fallback for uncaught errors)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 

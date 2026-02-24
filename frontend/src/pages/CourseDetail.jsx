@@ -9,6 +9,7 @@ export default function CourseDetail() {
     const [course, setCourse] = useState(null);
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchCourseAndNotes();
@@ -16,17 +17,24 @@ export default function CourseDetail() {
 
     const fetchCourseAndNotes = async () => {
         setLoading(true);
-        const [cRes, nRes] = await Promise.all([
-            api.getCourse(courseId),
-            api.getNotesByCourse(courseId)
-        ]);
-        if (!cRes.data) {
-            navigate('/'); // Course not found
-            return;
+        setError(null);
+        try {
+            const [cRes, nRes] = await Promise.all([
+                api.getCourse(courseId),
+                api.getNotesByCourse(courseId)
+            ]);
+            if (!cRes.data) {
+                navigate('/'); // Course not found
+                return;
+            }
+            setCourse(cRes.data);
+            setNotes(nRes.data);
+        } catch (err) {
+            console.error('Error fetching course or notes:', err);
+            setError('Failed to load course. Please try again.');
+        } finally {
+            setLoading(false);
         }
-        setCourse(cRes.data);
-        setNotes(nRes.data);
-        setLoading(false);
     };
 
     const handleDeleteNote = async (id, e) => {
@@ -37,10 +45,15 @@ export default function CourseDetail() {
         }
     };
 
-    if (loading) return <div className="loading-state">Loading course logic...</div>;
+    if (loading) return <div className="loading-state">Loading course...</div>;
 
     return (
         <div className="course-detail page-enter-active">
+            {error && (
+                <div className="error-banner">
+                    {error}
+                </div>
+            )}
             {/* Breadcrumb Navigation */}
             <nav className="breadcrumbs">
                 <Link to="/" className="crumb-link">Home</Link>

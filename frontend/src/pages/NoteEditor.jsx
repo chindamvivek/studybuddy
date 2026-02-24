@@ -52,13 +52,19 @@ export default function NoteEditor() {
             return;
         }
         setSaving(true);
-        if (isNew) {
-            const res = await api.createNote(courseId, { title, content });
-            navigate(`/courses/${courseId}/notes/${res.data.id}`);
-        } else {
-            await api.updateNote(courseId, noteId, { title, content });
+        try {
+            if (isNew) {
+                const res = await api.createNote(courseId, { title, content });
+                navigate(`/courses/${courseId}/notes/${res.data.id}`);
+            } else {
+                await api.updateNote(courseId, noteId, { title, content });
+            }
+        } catch (error) {
+            console.error('Error saving note:', error);
+            alert('Failed to save note. Please try again.');
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
     };
 
     const handleSummarize = async () => {
@@ -67,9 +73,15 @@ export default function NoteEditor() {
             return;
         }
         setSummarizing(true);
-        const res = await api.summarizeNote(courseId, noteId);
-        setSummary(res.data.summary);
-        setSummarizing(false);
+        try {
+            const res = await api.summarizeNote(courseId, noteId);
+            setSummary(res.data.summary);
+        } catch (error) {
+            console.error('Error summarizing note:', error);
+            alert('Failed to summarize note. Please try again.');
+        } finally {
+            setSummarizing(false);
+        }
     };
 
     if (loading || !course) return <div className="loading-state">Loading note editor...</div>;
