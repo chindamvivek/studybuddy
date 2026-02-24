@@ -1,0 +1,104 @@
+/* Breadcrumbs styling */
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+    color: var(--text-muted);
+}
+
+.crumb-link {
+    transition: color 0.2s;
+}
+
+.crumb-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.crumb-separator {
+    opacity: 0.5;
+}
+
+.crumb-current {
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.course-desc {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    max-width: 600px;
+}
+
+.notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.note-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.note-item:hover {
+    transform: translateX(5px);
+    border-left-color: var(--primary-color);
+    background: var(--bg-panel-hover);
+}
+
+.note-info h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.note-info .date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.note-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.ai-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #C4B5FD;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    display: inline-flex;
+    align-items: center;
+}
+
+.loading-state {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
