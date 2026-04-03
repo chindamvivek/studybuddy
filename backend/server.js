@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { db, initDb } from './db.js';
 
 // Load environment variables from .env
@@ -340,10 +341,10 @@ app.post('/api/courses/:courseId/notes/:noteId/summarize', async (req, res, next
         if (!note) return res.status(404).json({ error: 'Note not found or does not belong to this course' });
         if (!note.content) return res.status(400).json({ error: 'Note content is empty. Cannot summarize.' });
 
-        const groqApiKey = process.env.GROQ_API_KEY;
-        if (!groqApiKey || typeof groqApiKey !== 'string' || !groqApiKey.trim()) {
+        const geminiApiKey = process.env.GEMINI_API_KEY;
+        if (!geminiApiKey || typeof geminiApiKey !== 'string' || !geminiApiKey.trim()) {
             return res.status(500).json({
-                error: 'AI service is not configured. Create backend/.env with GROQ_API_KEY and restart backend.',
+                error: 'AI service is not configured. Create backend/.env with GEMINI_API_KEY and restart backend.',
             });
         }
 
@@ -362,77 +363,64 @@ Please format your response in markdown with:
 
 Keep the summary educational and actionable for a student reviewing this material.`;
 
-        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${groqApiKey.trim()}`,
-            },
-            body: JSON.stringify({
-                model: 'llama3-8b-8192',
-                messages: [
-                    { role: 'system', content: 'You are a helpful study assistant. Output must be valid markdown.' },
-                    { role: 'user', content: prompt },
-                ],
-                temperature: 0.2,
-                max_tokens: 500,
-            }),
-        });
+        const genAI = new GoogleGenerativeAI(geminiApiKey.trim());
+        const configuredModel = process.env.GEMINI_MODEL;
+        const modelCandidates = [
+            configuredModel,
+            'gemini-2.5-flash',
+            'gemini-2.5-flash-latest',
+            'gemini-1.5-flash-latest',
+            'gemini-1.5-pro-latest',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+        ].filter((m) => typeof m === 'string' && m.trim());
 
-        if (!groqRes.ok) {
-            const contentType = groqRes.headers.get('content-type') || '';
-            let errText = '';
-            let errJson = null;
+        let summary = null;
+        let lastModelError = null;
+        let attemptedModels = [];
 
+        for (const modelName of modelCandidates) {
+            attemptedModels.push(modelName);
             try {
-                if (contentType.includes('application/json')) {
-                    errJson = await groqRes.json();
-                } else {
-                    errText = await groqRes.text();
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                const text = result?.response?.text?.();
+                if (text && typeof text === 'string' && text.trim()) {
+                    summary = text;
+                    break;
                 }
-            } catch {
-                // ignore parsing errors
+            } catch (e) {
+                lastModelError = e;
             }
+        }
 
-            const upstreamMessage =
-                errJson?.error?.message ||
-                errJson?.message ||
-                (typeof errText === 'string' && errText.trim() ? errText.trim() : null);
+        if (!summary) {
+            const details = typeof lastModelError?.message === 'string' ? lastModelError.message : 'Unknown error';
 
-            if (groqRes.status === 401 || groqRes.status === 403) {
-                return res.status(500).json({
-                    error: 'AI service authentication failed. Check GROQ_API_KEY.',
-                    details: upstreamMessage || undefined,
-                });
-            }
-            if (groqRes.status === 429) {
+            const quotaOrRateLimited =
+                details.includes('429') ||
+                details.toLowerCase().includes('too many requests') ||
+                details.toLowerCase().includes('quota exceeded') ||
+                details.toLowerCase().includes('rate limit');
+
+            if (quotaOrRateLimited) {
                 return res.status(429).json({
-                    error: 'AI service rate limit exceeded. Please try again later.',
-                    details: upstreamMessage || undefined,
-                });
-            }
-
-            // If request is invalid (bad model, too many tokens, etc.), bubble it up clearly
-            if (groqRes.status >= 400 && groqRes.status < 500) {
-                return res.status(400).json({
-                    error: 'AI request failed. Please try again.',
-                    details: upstreamMessage || undefined,
+                    error: 'Gemini quota/rate limit exceeded. Please check your plan/billing or wait and retry.',
+                    details: `Attempted models: ${attemptedModels.join(', ')}. Last error: ${details}`,
                 });
             }
 
             return res.status(502).json({
-                error: 'AI service error. Please try again.',
-                details: upstreamMessage || undefined,
+                error: 'AI service error. No available Gemini model could generate a summary.',
+                details: `Attempted models: ${attemptedModels.join(', ')}. Last error: ${details}`,
             });
         }
 
-        const groqJson = await groqRes.json();
-        const summary = groqJson?.choices?.[0]?.message?.content;
         if (!summary || typeof summary !== 'string' || !summary.trim()) {
             return res.status(502).json({ error: 'AI service returned an empty summary. Please try again.' });
         }
 
-        const summaryWithFooter = `${summary.trim()}\n\n---\n*AI Summary generated by StudyBuddy*`;
+        const summaryWithFooter = `${summary.trim()}\n\n---\n*AI Summary generated by StudyBuddy (Gemini)*`;
 
         const stmt = db.prepare('UPDATE notes SET summary = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
         stmt.run(summaryWithFooter, noteId);
@@ -440,7 +428,11 @@ Keep the summary educational and actionable for a student reviewing this materia
         res.json({ summary: summaryWithFooter });
     } catch (error) {
         console.error('AI Summarization Error:', error);
-        res.status(500).json({ error: 'Failed to generate summary. Please try again.' });
+        const message = typeof error?.message === 'string' ? error.message : 'Unknown error';
+        res.status(500).json({
+            error: 'Failed to generate summary. Please try again.',
+            details: message,
+        });
     }
 });
 
