@@ -8,7 +8,7 @@ export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const from = location.state?.from?.pathname || '/';
+    const from = location.state?.from?.pathname || '/dashboard';
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -34,15 +34,37 @@ export default function Login() {
 
     return (
         <div className="auth-layout">
+            {/* ── Hero Side ── */}
             <div className="auth-hero">
                 <div className="auth-hero-inner">
-                    <span className="hero-pill">Your AI-assisted study OS</span>
-                    <h1>Stay organized, learn faster.</h1>
+                    <div className="brand-logo">
+                        <span className="brand-logo-icon">🧠</span>
+                        <span className="brand-logo-text">StudyBuddy</span>
+                    </div>
+                    <span className="hero-pill">Your AI-powered study OS</span>
+                    <h1>Stay <em>organized</em>,<br />learn faster.</h1>
                     <p>StudyBuddy keeps your courses, notes, and AI summaries in one calm, structured workspace.</p>
+                    <ul className="hero-features">
+                        <li>
+                            <span className="feat-icon">📚</span>
+                            Organize courses &amp; notes effortlessly
+                        </li>
+                        <li>
+                            <span className="feat-icon">✨</span>
+                            AI-powered smart summaries
+                        </li>
+                        <li>
+                            <span className="feat-icon">🎯</span>
+                            Study smarter, not harder
+                        </li>
+                    </ul>
                 </div>
             </div>
+
+            {/* ── Auth Panel ── */}
             <div className="auth-panel">
-                <div className="auth-card glass-panel">
+                <div className="auth-card">
+                    <div className="auth-card-icon">👋</div>
                     <h2 className="auth-title">Welcome back</h2>
                     <p className="auth-subtitle">Log in to access your study workspace.</p>
 
@@ -52,6 +74,7 @@ export default function Login() {
                         <label className="field-label">
                             Email
                             <input
+                                id="login-email"
                                 type="email"
                                 className="input-field"
                                 value={email}
@@ -63,6 +86,7 @@ export default function Login() {
                         <label className="field-label">
                             Password
                             <input
+                                id="login-password"
                                 type="password"
                                 className="input-field"
                                 value={password}
@@ -71,20 +95,22 @@ export default function Login() {
                                 required
                             />
                         </label>
-                        <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
-                            {loading ? 'Signing in…' : 'Sign in'}
+                        <button
+                            id="login-submit-btn"
+                            type="submit"
+                            className="btn btn-primary auth-submit"
+                            disabled={loading}
+                        >
+                            {loading ? 'Signing in…' : 'Sign in →'}
                         </button>
                     </form>
 
                     <p className="auth-footer-text">
                         New to StudyBuddy?{' '}
-                        <Link to="/signup" className="link-primary">
-                            Create an account
-                        </Link>
+                        <Link to="/signup" className="link-primary">Create an account</Link>
                     </p>
                 </div>
             </div>
         </div>
     );
 }
-
